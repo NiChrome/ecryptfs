@@ -435,7 +435,7 @@ static int ecryptfs_parse_options(struct ecryptfs_sb_info *sbi, char *options,
 	if (!cipher_mode_name_set) {
 		int cipher_mode_name_len = strlen(ECRYPTFS_DEFAULT_CIPHER_MODE);
 
-		BUG_ON(cipher_mode_name_len >=
+		BUILD_BUG_ON(cipher_mode_name_len >=
 			ECRYPTFS_MAX_CIPHER_MODE_NAME_SIZE);
 		strcpy(mount_crypt_stat->global_default_cipher_mode_name,
 		       ECRYPTFS_DEFAULT_CIPHER_MODE);
