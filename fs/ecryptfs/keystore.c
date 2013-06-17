@@ -1392,7 +1392,7 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 	size_t body_size;
 	struct ecryptfs_auth_tok_list_item *auth_tok_list_item;
 	size_t length_size;
-	size_t min_packet_size;
+	size_t min_body_size;
 	u8 file_version;
 	int rc = 0;
 
@@ -1431,7 +1431,7 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 	 */
 
 	/* Holds the minimum amount of data for a version 0x04 packet */
-	min_packet_size = (1 /* Version */
+	min_body_size = (1 /* Version */
 			   + 1 /* Cipher Code */
 			   + 1 /* S2K Specifier */
 			   + 1 /* Hash Identifier */
@@ -1467,7 +1467,7 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 		       rc);
 		goto out_free;
 	}
-	if (unlikely(body_size < min_packet_size)) {
+	if (unlikely(body_size < min_body_size)) {
 		printk(KERN_WARNING "Invalid body size ([%td])\n", body_size);
 		rc = -EINVAL;
 		goto out_free;
@@ -1487,10 +1487,10 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 	}
 	if (file_version != 0x04) {
 		/* This file version has an extra field for cipher mode code */
-		min_packet_size += 1;
+		min_body_size += 1;
 	}
 	(*new_auth_tok)->session_key.encrypted_key_size =
-		(body_size - min_packet_size);
+		(body_size - min_body_size);
 	if ((*new_auth_tok)->session_key.encrypted_key_size
 	    > ECRYPTFS_MAX_ENCRYPTED_KEY_BYTES) {
 		printk(KERN_WARNING "Tag 3 packet contains key larger "
