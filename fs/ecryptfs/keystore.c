@@ -2157,11 +2157,10 @@ encrypted_session_key_set:
 	}
 
 	/* Tag Version */
-	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_CBC) {
+	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_CBC)
 		dest[(*packet_size)++] = 0x03;
-	} else {
+	else
 		dest[(*packet_size)++] = 0x04;
-	}
 	memcpy(&dest[(*packet_size)], key_rec->sig, ECRYPTFS_SIG_SIZE);
 	(*packet_size) += ECRYPTFS_SIG_SIZE;
 	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_CBC) {
@@ -2480,9 +2479,8 @@ encrypted_session_key_set:
 	}
 
 	dest[(*packet_size)++] = cipher_code;
-	if (cipher_mode_code != ECRYPTFS_CIPHER_MODE_CBC) {
+	if (cipher_mode_code != ECRYPTFS_CIPHER_MODE_CBC)
 		dest[(*packet_size)++] = cipher_mode_code;
-	}
 	dest[(*packet_size)++] = 0x03;	/* S2K */
 	dest[(*packet_size)++] = 0x01;	/* MD5 (TODO: parameterize) */
 	memcpy(&dest[(*packet_size)], auth_tok->token.password.salt,
