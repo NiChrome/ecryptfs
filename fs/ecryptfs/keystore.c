@@ -1440,8 +1440,7 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 			  );
 
 	if (max_packet_size < (ECRYPTFS_SALT_SIZE + 7)) {
-		printk(KERN_ERR "Max packet size too small to read smallest"
-				"packet\n");
+		printk(KERN_ERR "Max packet size too large\n");
 		rc = -EINVAL;
 		goto out;
 	}
