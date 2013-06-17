@@ -47,7 +47,6 @@
 
 #define ECRYPTFS_CIPHER_MODE_CBC 0x01
 #define ECRYPTFS_CIPHER_MODE_GCM 0x02
-#define ECRYPTFS_CIPHER_MODE_ECB 0x03
 
 /**
  * For convenience, we may need to pass around the encrypted session
