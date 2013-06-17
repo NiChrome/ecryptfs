@@ -1326,7 +1326,7 @@ parse_tag_1_packet(struct ecryptfs_crypt_stat *crypt_stat,
 		rc = ecryptfs_cipher_mode_code_to_string(
 				crypt_stat->cipher_mode,
 				data[(*packet_size)++]);
-		if(rc)
+		if (rc)
 			goto out_free;
 	}
 	(*new_auth_tok)->session_key.encrypted_key_size =
@@ -1516,9 +1516,10 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 
 	/* Read the cipher mode if it is present */
 	if (file_version != 0x04) {
-		rc = ecryptfs_cipher_mode_code_to_string(crypt_stat->cipher_mode,
+		rc = ecryptfs_cipher_mode_code_to_string(
+				crypt_stat->cipher_mode,
 				data[(*packet_size)++]);
-		if(rc)
+		if (rc)
 			goto out_free;
 	} else {
 		strcpy(crypt_stat->cipher_mode, "cbc");

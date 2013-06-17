@@ -994,7 +994,7 @@ u8 ecryptfs_code_for_cipher_mode_string(char *mode_name)
 	struct ecryptfs_cipher_mode_code_str_map_elem *map =
 		ecryptfs_cipher_mode_code_str_map;
 
-	for(i = 0; i < ARRAY_SIZE(ecryptfs_cipher_mode_code_str_map); i++)
+	for (i = 0; i < ARRAY_SIZE(ecryptfs_cipher_mode_code_str_map); i++)
 		if (strcmp(mode_name, map[i].mode_str) == 0) {
 			code = map[i].mode_code;
 			break;
@@ -1018,7 +1018,7 @@ int ecryptfs_cipher_mode_code_to_string(char *str, u8 mode_code)
 		ecryptfs_cipher_mode_code_str_map;
 
 	str[0] = '\0';
-	for(i = 0; i < ARRAY_SIZE(ecryptfs_cipher_mode_code_str_map); i++)
+	for (i = 0; i < ARRAY_SIZE(ecryptfs_cipher_mode_code_str_map); i++)
 		if (mode_code == map[i].mode_code) {
 			strcpy(str, map[i].mode_str);
 			break;
