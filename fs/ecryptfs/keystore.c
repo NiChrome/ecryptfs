@@ -1258,9 +1258,9 @@ parse_tag_1_packet(struct ecryptfs_crypt_stat *crypt_stat,
 	 *
 	 * Tag 1 identifier (1 byte)
 	 * Max Tag 1 packet size (max 3 bytes)
-	 * Version (1 byte) (0x03 and 0x04 are valid versions)
+	 * Version (1 byte)
 	 * Key identifier (8 bytes; ECRYPTFS_SIG_SIZE)
-	 * Cipher mode identifier (1 byte) (ignored if version is 0x03)
+	 * Cipher mode identifier (1 byte) (ignored if packet version is 0x03)
 	 * Encrypted key size (arbitrary)
 	 *
 	 * 12 bytes minimum packet size
@@ -1321,8 +1321,8 @@ parse_tag_1_packet(struct ecryptfs_crypt_stat *crypt_stat,
 		(*packet_size)++;
 		strcpy(crypt_stat->cipher_mode, "cbc");
 	} else {
-		/* This field is repurposed in version 0x04 to hold the
-		 * cipher mode. It is ignored in earlier verions. */
+		/* This field is repurposed in packet version 0x04 to hold the
+		 * cipher mode. It is ignored in earlier packet versions. */
 		rc = ecryptfs_cipher_mode_code_to_string(
 				crypt_stat->cipher_mode,
 				data[(*packet_size)++]);
@@ -1402,32 +1402,32 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 	 *This format is inspired by OpenPGP; see RFC 2440
 	 * packet tag 3
 	 *
-	 * This header deviates from the RFC in two ways:
-	 * 1. There is an additional (optional) field describing which cipher
-	 * mode was used.
+	 * This packet format deviates from the RFC in two ways:
+	 * 1. There is an additional field describing which cipher
+	 * mode was used. 
 	 *
 	 * 2. The version field is used to differentiate between different
-	 * versions of the header as used in eCryptfs instead of the different
+	 * versions of the packet as used in eCryptfs instead of the different
 	 * version of tag 3 in the RFC.
 	 *
-	 * Version 0x04 is a header that does not have the additional
+	 * Version 0x04 is a packet that does not have the additional
 	 * cipher mode field. The cipher mode is then assumed to be CBC.
 	 *
-	 * Version 0x05 is a header that does have the additional cipher mode
+	 * Version 0x05 is a packet that does have the additional cipher mode
 	 * field. The cipher mode is taken from this header.
 	 *
 	 * Tag 3 identifier (1 byte)
 	 * Max Tag 3 packet size (max 3 bytes)
 	 * Version (1 byte)
 	 * Cipher code (1 byte)
-	 * Cipher mode code (1 byte) (Optional, Depends on Version)
+	 * Cipher mode code (1 byte) (if version >= 0x05)
 	 * S2K specifier (1 byte)
 	 * Hash identifier (1 byte)
 	 * Salt (ECRYPTFS_SALT_SIZE)
 	 * Hash iterations (1 byte)
 	 * Encrypted key (arbitrary)
 	 *
-	 * (ECRYPTFS_SALT_SIZE + 7) minimum packet size for Version 0x04
+	 * (ECRYPTFS_SALT_SIZE + 7) minimum packet size
 	 */
 
 	/* Holds the minimum amount of data for a version 0x04 packet */
@@ -1486,7 +1486,7 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 		goto out_free;
 	}
 	if (file_version != 0x04) {
-		/* This file version has an extra field for cipher mode code */
+		/* This file version has an extra byte for cipher mode code */
 		min_body_size += 1;
 	}
 	(*new_auth_tok)->session_key.encrypted_key_size =
@@ -2163,7 +2163,7 @@ encrypted_session_key_set:
 	memcpy(&dest[(*packet_size)], key_rec->sig, ECRYPTFS_SIG_SIZE);
 	(*packet_size) += ECRYPTFS_SIG_SIZE;
 	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_CBC) {
-		/* Version 0x03 packets always wrote this constant */
+		/* Version 0x03 packets always contain this constant */
 		dest[(*packet_size)++] = RFC2440_CIPHER_RSA;
 	} else {
 		dest[(*packet_size)++] = cipher_mode_code;
@@ -2389,31 +2389,27 @@ write_tag_3_packet(char *dest, size_t *remaining_bytes,
 				  key_rec->enc_key_size);
 	}
 encrypted_session_key_set:
-	/* This format is inspired by OpenPGP; see RFC 2440 packet tag 3.
+	/* This format is inspired by OpenPGP; see RFC 2440
+	 * packet tag 3
 	 *
-	 * This header deviates from the RFC in two ways:
-	 * 1. There is an additional field describing which cipher mode was
-	 * used.
+	 * This packet format deviates from the RFC in two ways:
+	 * 1. There is an additional field describing which cipher
+	 * mode was used. 
 	 *
 	 * 2. The version field is used to differentiate between different
-	 * versions of the header as used in eCryptFS instead of the different
-	 * versions of tag 3 in the RFC.
+	 * versions of the packet as used in eCryptfs instead of the different
+	 * version of tag 3 in the RFC.
 	 *
-	 * Version 0x04 is the first version of the header used in eCryptFS.
-	 * This number comes from the RFC. It's used in all cases when CBC mode
-	 * is used. This header does not have an additional field for the cipher
-	 * mode, instead version 0x04 tags are assumed to use CBC.
+	 * Version 0x04 is a packet that does not have the additional
+	 * cipher mode field. The cipher mode is then assumed to be CBC.
 	 *
-	 * This is for forwards compatability, where previous versions of
-	 * eCryptFS can still read and write CBC encrypted files from new
-	 * versions.
+	 * Version 0x05 is a packet that does have the additional cipher mode
+	 * field. The cipher mode is taken from this header.
 	 *
-	 * Version 0x05 is a header that does have the additional cipher mode
-	 * field. In this case the cipher mode is taken from this header. This
-	 * is written out for any cipher mode that is not CBC.
-	 *
-	 * Old Versions of eCryptFS do not support cipher modes other than CBC,
-	 * they will error out when opening files with version 0x05 tags.
+	 * This is for forwards compatability, so that older versions of
+	 * eCryptfs can still read and write CBC encrypted files from new
+	 * versions, but will refuse to open files encrypted in modes they do
+	 * not understand.
 	 *
 	 * */
 
