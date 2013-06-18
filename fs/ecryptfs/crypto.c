@@ -977,6 +977,8 @@ struct ecryptfs_cipher_mode_code_str_map_elem {
 static struct ecryptfs_cipher_mode_code_str_map_elem
 ecryptfs_cipher_mode_code_str_map[] = {
 	{"cbc", ECRYPTFS_CIPHER_MODE_CBC},
+	{"gcm", ECRYPTFS_CIPHER_MODE_GCM},
+	{"ecb", ECRYPTFS_CIPHER_MODE_ECB}
 };
 
 /**
