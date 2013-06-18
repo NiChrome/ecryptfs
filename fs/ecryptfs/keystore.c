@@ -1398,13 +1398,12 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 
 	(*packet_size) = 0;
 	(*new_auth_tok) = NULL;
-	/**
-	 *This format is inspired by OpenPGP; see RFC 2440
+	/* This format is inspired by OpenPGP; see RFC 2440
 	 * packet tag 3
 	 *
 	 * This packet format deviates from the RFC in two ways:
 	 * 1. There is an additional field describing which cipher
-	 * mode was used. 
+	 * mode was used.
 	 *
 	 * 2. The version field is used to differentiate between different
 	 * versions of the packet as used in eCryptfs instead of the different
@@ -2394,7 +2393,7 @@ encrypted_session_key_set:
 	 *
 	 * This packet format deviates from the RFC in two ways:
 	 * 1. There is an additional field describing which cipher
-	 * mode was used. 
+	 * mode was used.
 	 *
 	 * 2. The version field is used to differentiate between different
 	 * versions of the packet as used in eCryptfs instead of the different

@@ -4,7 +4,6 @@
 /* Version verification for shared data structures w/ userspace */
 #define ECRYPTFS_VERSION_MAJOR 0x00
 #define ECRYPTFS_VERSION_MINOR 0x04
-/* TODO: Increment and use this value properly */
 #define ECRYPTFS_SUPPORTED_FILE_VERSION 0x03
 /* These flags indicate which features are supported by the kernel
  * module; userspace tools such as the mount helper read the feature
@@ -46,7 +45,6 @@
 #define RFC2440_CIPHER_RSA 0x01
 
 #define ECRYPTFS_CIPHER_MODE_CBC 0x01
-#define ECRYPTFS_CIPHER_MODE_GCM 0x02
 
 /**
  * For convenience, we may need to pass around the encrypted session
