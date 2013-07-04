@@ -349,7 +349,9 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 
 	BUG_ON(!crypt_stat || !crypt_stat->tfm
 	       || !(crypt_stat->flags & ECRYPTFS_STRUCT_INITIALIZED));
-	BUG_ON(crypto_tfm_alg_type(crypt_stat->tfm) != CRYPTO_ALG_TYPE_ABLKCIPHER);
+	//BUG_ON(crypto_tfm_alg_type(crypt_stat->tfm) != CRYPTO_ALG_TYPE_ABLKCIPHER);
+	ecryptfs_printk(KERN_DEBUG, "cryptfo_tfm_alg_type: %zd", crypto_tfm_alg_type(crypt_stat->tfm));
+	ecryptfs_printk(KERN_DEBUG, "CRYPTO_ALG_TYPE_ABLKCIPHER: %zd", CRYPTO_ALG_TYPE_ABLKCIPHER);
 	if (unlikely(ecryptfs_verbosity > 0)) {
 		ecryptfs_printk(KERN_DEBUG, "Key size [%zd]; key:\n",
 				crypt_stat->key_size);
