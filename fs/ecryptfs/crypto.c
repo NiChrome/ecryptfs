@@ -350,9 +350,9 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 	int cipher_code = ecryptfs_code_for_cipher_mode_string(
 			crypt_stat->cipher_mode);
 	struct scatterlist assoc_sg;
-	unsigned char buf[10];
+	unsigned char buf[16];
 
-	sg_init_one(&assoc_sg, buf, 10);
+	sg_init_one(&assoc_sg, buf, 16);
 
 	BUG_ON(!crypt_stat || !crypt_stat->tfm
 	       || !(crypt_stat->flags & ECRYPTFS_STRUCT_INITIALIZED));
@@ -481,7 +481,10 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 	pgoff_t page_index = op == ENCRYPT ? src_page->index : dst_page->index;
 	loff_t extent_base;
 	char extent_iv[ECRYPTFS_MAX_IV_BYTES];
-	struct scatterlist src_sg, dst_sg;
+	struct scatterlist src_sg[2];
+	struct scatterlist dst_sg[2];
+	u8 extra_src[32];
+	u8 extra_dst[32];
 	size_t extent_size = crypt_stat->extent_size;
 	int rc;
 
@@ -495,15 +498,18 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 		goto out;
 	}
 
-	sg_init_table(&src_sg, 1);
-	sg_init_table(&dst_sg, 1);
+	sg_init_table(&src_sg[0], 2);
+	sg_init_table(&dst_sg[0], 2);
 
-	sg_set_page(&src_sg, src_page, extent_size,
+	sg_set_page(&src_sg[0], src_page, extent_size,
 		    extent_offset * extent_size);
-	sg_set_page(&dst_sg, dst_page, extent_size,
-		    extent_offset * extent_size);
+	sg_set_buf(&src_sg[1], extra_src, ARRAY_SIZE(extra_src));
 
-	rc = crypt_scatterlist(crypt_stat, &dst_sg, &src_sg, extent_size,
+	sg_set_page(&dst_sg[0], dst_page, extent_size,
+		    extent_offset * extent_size);
+	sg_set_buf(&dst_sg[1], extra_dst, ARRAY_SIZE(extra_dst));
+
+	rc = crypt_scatterlist(crypt_stat, &dst_sg[0], &src_sg[0], extent_size,
 			       extent_iv, op);
 	if (rc < 0) {
 		printk(KERN_ERR "%s: Error attempting to crypt page with "
