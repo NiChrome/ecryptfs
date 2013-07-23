@@ -1076,7 +1076,7 @@ u8 ecryptfs_code_for_cipher_mode_string(char *mode_name)
 /**
  * ecryptfs_cipher_mode_code_to_string
  * @str: Destination to write out the cipher mode name
- * @cipher_code: The code to conver to cipher mode name string
+ * @mode_code: The code to conver to cipher mode name string
  *
  * Retruns zero in success
  */
