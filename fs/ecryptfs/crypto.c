@@ -483,8 +483,8 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 	char extent_iv[ECRYPTFS_MAX_IV_BYTES];
 	struct scatterlist src_sg[2];
 	struct scatterlist dst_sg[2];
-	u8 extra_src[32];
-	u8 extra_dst[32];
+	u8 extra_src[16];
+	u8 extra_dst[16];
 	size_t extent_size = crypt_stat->extent_size;
 	int rc;
 
@@ -546,12 +546,16 @@ int ecryptfs_encrypt_page(struct page *page)
 	struct page *enc_extent_page = NULL;
 	loff_t extent_offset;
 	loff_t lower_offset;
+	int num_extents_per_page;
 	int rc = 0;
 
 	ecryptfs_inode = page->mapping->host;
 	crypt_stat =
 		&(ecryptfs_inode_to_private(ecryptfs_inode)->crypt_stat);
 	BUG_ON(!(crypt_stat->flags & ECRYPTFS_ENCRYPTED));
+
+	num_extents_per_page = PAGE_CACHE_SIZE / crypt_stat->extent_size;
+
 	enc_extent_page = alloc_page(GFP_USER);
 	if (!enc_extent_page) {
 		rc = -ENOMEM;
@@ -561,7 +565,7 @@ int ecryptfs_encrypt_page(struct page *page)
 	}
 
 	for (extent_offset = 0;
-	     extent_offset < (PAGE_CACHE_SIZE / crypt_stat->extent_size);
+	     extent_offset < num_extents_per_page;
 	     extent_offset++) {
 		rc = crypt_extent(crypt_stat, enc_extent_page, page,
 				  extent_offset, ENCRYPT);
