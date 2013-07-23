@@ -163,7 +163,7 @@ ecryptfs_copy_up_encrypted_with_header(struct page *page,
 			loff_t lower_offset =
 				((view_extent_num * crypt_stat->extent_size)
 				 - crypt_stat->metadata_size);
-
+			// ZAMEER: Change how this is called
 			rc = ecryptfs_read_lower_page_segment(
 				page, (lower_offset >> PAGE_CACHE_SHIFT),
 				(lower_offset & ~PAGE_CACHE_MASK),
@@ -215,6 +215,7 @@ static int ecryptfs_readpage(struct file *file, struct page *page)
 			}
 
 		} else {
+			// ZAMEER: Change how this is called
 			rc = ecryptfs_read_lower_page_segment(
 				page, page->index, 0, PAGE_CACHE_SIZE,
 				page->mapping->host);
@@ -322,6 +323,7 @@ static int ecryptfs_write_begin(struct file *file,
 				}
 				SetPageUptodate(page);
 			} else {
+				// ZAMEER: Change thos this is called
 				rc = ecryptfs_read_lower_page_segment(
 					page, index, 0, PAGE_CACHE_SIZE,
 					mapping->host);

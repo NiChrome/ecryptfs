@@ -574,6 +574,7 @@ int ecryptfs_encrypt_page(struct page *page)
 
 	lower_offset = lower_offset_for_page(crypt_stat, page);
 	enc_extent_virt = kmap(enc_extent_page);
+	// ZAMEER: Change how this is called
 	rc = ecryptfs_write_lower(ecryptfs_inode, enc_extent_virt, lower_offset,
 				  PAGE_CACHE_SIZE);
 	kunmap(enc_extent_page);
@@ -623,6 +624,7 @@ int ecryptfs_decrypt_page(struct page *page)
 
 	lower_offset = lower_offset_for_page(crypt_stat, page);
 	page_virt = kmap(page);
+	// ZAMEER: change how this is called
 	rc = ecryptfs_read_lower(page_virt, lower_offset, PAGE_CACHE_SIZE,
 				 ecryptfs_inode);
 	kunmap(page);
