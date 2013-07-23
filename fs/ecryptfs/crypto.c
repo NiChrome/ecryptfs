@@ -347,7 +347,7 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 	struct aead_request *aead_req = NULL;
 	struct extent_crypt_result ecr;
 	int rc = 0;
-	int cipher_code = ecryptfs_code_for_cipher_mode_string(
+	int cipher_mode_code = ecryptfs_code_for_cipher_mode_string(
 			crypt_stat->cipher_mode);
 	struct scatterlist assoc_sg;
 	unsigned char buf[16];
@@ -367,7 +367,7 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 
 	mutex_lock(&crypt_stat->cs_tfm_mutex);
 
-	if (cipher_code == ECRYPTFS_CIPHER_MODE_GCM) {
+	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 		aead_req = aead_request_alloc((struct crypto_aead *)
 				crypt_stat->tfm, GFP_NOFS);
 	} else {
@@ -381,7 +381,7 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 		goto out;
 	}
 
-	if (cipher_code == ECRYPTFS_CIPHER_MODE_GCM) {
+	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 		aead_request_set_callback(aead_req,
 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
 			extent_crypt_complete, &ecr);
@@ -393,7 +393,7 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 	/* Consider doing this once, when the file is opened */
 	if (!(crypt_stat->flags & ECRYPTFS_KEY_SET)) {
 
-		if (cipher_code == ECRYPTFS_CIPHER_MODE_GCM) {
+		if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 			rc = crypto_aead_setkey((struct crypto_aead *)
 					crypt_stat->tfm,
 					crypt_stat->key,
@@ -418,18 +418,18 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 	mutex_unlock(&crypt_stat->cs_tfm_mutex);
 
 
-	if (cipher_code == ECRYPTFS_CIPHER_MODE_GCM) {
+	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 		aead_request_set_crypt(aead_req, src_sg, dst_sg, size, iv);
 		aead_request_set_assoc(aead_req, &assoc_sg, 0);
 	} else {
 		ablkcipher_request_set_crypt(ablk_req, src_sg, dst_sg, size, iv);
 	}
 
-	if (op == ENCRYPT && cipher_code == ECRYPTFS_CIPHER_MODE_GCM) {
+	if (op == ENCRYPT && cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 		rc = crypto_aead_encrypt(aead_req);
 	} else if (op == ENCRYPT) {
 		rc = crypto_ablkcipher_encrypt(ablk_req);
-	} else if (op == DECRYPT && cipher_code == ECRYPTFS_CIPHER_MODE_GCM) {
+	} else if (op == DECRYPT && cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 		rc = crypto_aead_decrypt(aead_req);
 	} else {
 		rc = crypto_ablkcipher_decrypt(ablk_req);
@@ -663,7 +663,7 @@ int ecryptfs_init_crypt_ctx(struct ecryptfs_crypt_stat *crypt_stat)
 {
 	char *full_alg_name;
 	int rc = -EINVAL;
-	int cipher_code;
+	int cipher_mode_code;
 
 	if (!crypt_stat->cipher) {
 		ecryptfs_printk(KERN_ERR, "No cipher specified\n");
@@ -685,8 +685,8 @@ int ecryptfs_init_crypt_ctx(struct ecryptfs_crypt_stat *crypt_stat)
 	if (rc)
 		goto out_unlock;
 
-	cipher_code = ecryptfs_code_for_cipher_mode_string(crypt_stat->cipher_mode);
-	if (cipher_code == ECRYPTFS_CIPHER_MODE_GCM) {
+	cipher_mode_code = ecryptfs_code_for_cipher_mode_string(crypt_stat->cipher_mode);
+	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 		crypt_stat->tfm = (struct crypto_tfm *)
 			crypto_alloc_aead(full_alg_name, 0, 0);
 	} else {
@@ -703,7 +703,7 @@ int ecryptfs_init_crypt_ctx(struct ecryptfs_crypt_stat *crypt_stat)
 			crypt_stat->cipher_mode);
 		goto out_unlock;
 	}
-	if (cipher_code == ECRYPTFS_CIPHER_MODE_GCM) {
+	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 		crypto_aead_set_flags((struct crypto_aead *) crypt_stat->tfm,
 				CRYPTO_TFM_REQ_WEAK_KEY);
 	} else {
