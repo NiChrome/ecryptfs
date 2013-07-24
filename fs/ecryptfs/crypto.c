@@ -40,6 +40,29 @@
 #define DECRYPT		0
 #define ENCRYPT		1
 
+
+static void dump_hex(char *data, int bytes)
+{
+	int i = 0;
+	int add_newline = 1;
+
+	if (bytes != 0) {
+		printk(KERN_ERR "0x%.2x.", (unsigned char)data[i]);
+		i++;
+	}
+	while (i < bytes) {
+		printk(KERN_ERR "0x%.2x.", (unsigned char)data[i]);
+		i++;
+		if (i % 16 == 0) {
+			printk("\n");
+			add_newline = 0;
+		} else
+			add_newline = 1;
+	}
+	if (add_newline)
+		printk(KERN_ERR "\n");
+}
+
 /**
  * ecryptfs_to_hex
  * @dst: Buffer to take hex character representation of contents of
@@ -352,6 +375,8 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 	u8 assoc_buf[16] = {0};
 	struct scatterlist assoc_sg;
 
+	printk(KERN_ERR "Entering crypt_scatterlist\n");
+
 	sg_init_one(&assoc_sg, &assoc_buf[0], ARRAY_SIZE(assoc_buf));
 
 	BUG_ON(!crypt_stat || !crypt_stat->tfm
@@ -398,6 +423,8 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 					crypt_stat->tfm,
 					crypt_stat->key,
 					crypt_stat->key_size);
+			printk(KERN_ERR "Key:\n");
+			dump_hex(crypt_stat->key, crypt_stat->key_size);
 		} else {
 			rc = crypto_ablkcipher_setkey((struct crypto_ablkcipher*)
 					crypt_stat->tfm,
@@ -445,6 +472,7 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 out:
 	ablkcipher_request_free(ablk_req);
 	aead_request_free(aead_req);
+	printk(KERN_ERR "Exiting crypt_scatterlist\n");
 	return rc;
 }
 
@@ -489,6 +517,8 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 	size_t extent_size = crypt_stat->extent_size;
 	int rc;
 
+	printk(KERN_ERR "Entering crypt_extent\n");
+
 	extent_base = (((loff_t)page_index) * (PAGE_CACHE_SIZE / extent_size));
 	rc = ecryptfs_derive_iv(extent_iv, crypt_stat,
 				(extent_base + extent_offset));
@@ -503,13 +533,10 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 	if (op == DECRYPT) {
 		// Copy the extra data to the proper place
 		unsigned long offset = 16 * extent_offset;
-		int i;
 		memcpy(extra_src, extra_data + offset, 16);
 
-		/* printk(KERN_ERR "Extent's Auth Tag:\n"); */
-		/* for(i = 0; i < 16; i++) { */
-		/* 	printk(KERN_ERR "%hhx\n", *(extra_data + offset + i)); */
-		/* } */
+		printk(KERN_ERR "Given Auth Tag For Decryption:\n");
+		dump_hex(extra_data + offset, 16);
 	}
 
 	sg_init_table(&src_sg[0], 2); sg_init_table(&dst_sg[0], 2);
@@ -532,19 +559,17 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 	}
 	
 	if (op == ENCRYPT) {
-		int i;
 		// Copy the extra data to the proper place
 		unsigned long offset = 16 * extent_offset;
 		memcpy(extra_data + offset, extra_dst, 16);
 
-		/* printk(KERN_ERR "Extent's Auth Tag:\n"); */
-		/* for(i = 0; i < 16; i++) { */
-		/* 	printk(KERN_ERR "%hhx\n", *(extra_data + offset + i)); */
-		/* } */
+		printk(KERN_ERR "Retrieved Auth Tag From Encryption:\n");
+		dump_hex(extra_data + offset, 16);
 	}
 
 	rc = 0;
 out:
+	printk(KERN_ERR "Exiting crypt_extent\n");
 	return rc;
 }
 
@@ -578,6 +603,8 @@ int ecryptfs_encrypt_page(struct page *page)
 	int data_extent_num;
 	int auth_extent_num;
 	int rc = 0;
+
+	printk(KERN_ERR "Entering ecryptfs_encrypt_page\n");
 
 	ecryptfs_inode = page->mapping->host;
 	crypt_stat =
@@ -618,6 +645,12 @@ int ecryptfs_encrypt_page(struct page *page)
 	}
 
 	enc_extent_virt = kmap(enc_extent_page);
+
+	printk(KERN_ERR "Encrypted Page of Data:\n");
+	dump_hex(enc_extent_virt, PAGE_CACHE_SIZE);
+
+	printk(KERN_ERR "Auth Tags For Data:\n");
+	dump_hex(extra_data, num_extents * 16);
 
 	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 		// TODO XXX Verify this is correct.
@@ -688,16 +721,6 @@ int ecryptfs_encrypt_page(struct page *page)
 		}
 	}
 
-	printk(KERN_ERR "First 32 bytes of encrypted data after encryption:\n");
-	for (extent_offset = 0; extent_offset < 32; extent_offset++) {
-		printk(KERN_ERR "%hhx\n", *(enc_extent_virt + extent_offset));
-	}
-
-	printk(KERN_ERR "Last 32 bytes of encrypted data after encryption:\n");
-	for (extent_offset = 0; extent_offset < 32; extent_offset++) {
-		printk(KERN_ERR "%hhx\n", *(enc_extent_virt + PAGE_SIZE - extent_offset - 1));
-	}
-
 	rc = 0;
 out:
 	kunmap(enc_extent_page);
@@ -708,6 +731,9 @@ out:
 	if (extra_data) {
 		kfree(extra_data);
 	}
+
+
+	printk(KERN_ERR "Exiting ecryptfs_encrypt_page\n");
 	return rc;
 }
 
@@ -740,6 +766,8 @@ int ecryptfs_decrypt_page(struct page *page)
 	int data_extent_num;
 	int auth_extent_num;
 	int rc = 0;
+
+	printk(KERN_ERR "Entering ecryptfs_decrypt_page\n");
 
 	ecryptfs_inode = page->mapping->host;
 	crypt_stat =
@@ -830,16 +858,11 @@ int ecryptfs_decrypt_page(struct page *page)
 		}
 	}
 
-	printk(KERN_ERR "First 32 bytes of encrypted data before decryption:\n");
-	for (extent_offset = 0; extent_offset < 32; extent_offset++) {
-		printk(KERN_ERR "%hhx\n", *(page_virt + extent_offset));
-	}
+	printk(KERN_ERR "Retrieved Page of Data before decryption:\n");
+	dump_hex(page_virt, PAGE_CACHE_SIZE);
 
-	printk(KERN_ERR "Last 32 bytes of encrypted data before decryption:\n");
-	for (extent_offset = 0; extent_offset < 32; extent_offset++) {
-		printk(KERN_ERR "%hhx\n", *(page_virt + PAGE_SIZE - extent_offset - 1));
-	}
-
+	printk(KERN_ERR "Retrived Auth Tags before decryption:\n");
+	dump_hex(extra_data, 16 * num_extents);
 
 	for (extent_offset = 0;
 	     extent_offset < num_extents;
@@ -854,15 +877,12 @@ int ecryptfs_decrypt_page(struct page *page)
 		}
 	}
 
-	printk(KERN_ERR "First 8 bytes of decrypted data:\n");
-	for (extent_offset = 0; extent_offset < 8; extent_offset++) {
-		printk(KERN_ERR "%hhx\n", *(page_virt + extent_offset));
-	}
 out:
 	kunmap(page);
 	if (extra_data) {
 		kfree(extra_data);
 	}
+	printk(KERN_ERR "Exiting ecryptfs_decrypt_page\n");
 	return rc;
 }
 
