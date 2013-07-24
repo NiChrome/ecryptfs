@@ -484,8 +484,8 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 	char extent_iv[ECRYPTFS_MAX_IV_BYTES];
 	struct scatterlist src_sg[2];
 	struct scatterlist dst_sg[2];
-	u8 extra_src[16];
-	u8 extra_dst[16];
+	u8 extra_src[16] = {0};
+	u8 extra_dst[16] = {0};
 	size_t extent_size = crypt_stat->extent_size;
 	int rc;
 
@@ -498,9 +498,21 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 			(unsigned long long)(extent_base + extent_offset), rc);
 		goto out;
 	}
+	// TODO: Remove Debug Output
 
-	sg_init_table(&src_sg[0], 2);
-	sg_init_table(&dst_sg[0], 2);
+	if (op == DECRYPT) {
+		// Copy the extra data to the proper place
+		unsigned long offset = 16 * extent_offset;
+		int i;
+		memcpy(extra_src, extra_data + offset, 16);
+
+		printk(KERN_ERR "Extent's Auth Tag:\n");
+		for(i = 0; i < 16; i++) {
+			printk(KERN_ERR "%hhx\n", *(extra_data + offset + i));
+		}
+	}
+
+	sg_init_table(&src_sg[0], 2); sg_init_table(&dst_sg[0], 2);
 
 	sg_set_page(&src_sg[0], src_page, extent_size,
 		    extent_offset * extent_size);
@@ -520,9 +532,15 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 	}
 	
 	if (op == ENCRYPT) {
+		int i;
 		// Copy the extra data to the proper place
 		unsigned long offset = 16 * extent_offset;
 		memcpy(extra_data + offset, extra_dst, 16);
+
+		printk(KERN_ERR "Extent's Auth Tag:\n");
+		for(i = 0; i < 16; i++) {
+			printk(KERN_ERR "%hhx\n", *(extra_data + offset + i));
+		}
 	}
 
 	rc = 0;
@@ -660,7 +678,6 @@ int ecryptfs_encrypt_page(struct page *page)
 		}
 	} else {
 		lower_offset = lower_offset_for_page(crypt_stat, page);
-		// ZAMEER: Change how this is called
 		rc = ecryptfs_write_lower(ecryptfs_inode, enc_extent_virt, lower_offset,
 					PAGE_CACHE_SIZE);
 		if (rc < 0) {
@@ -670,6 +687,12 @@ int ecryptfs_encrypt_page(struct page *page)
 			goto out;
 		}
 	}
+
+	printk(KERN_ERR "First 8 bytes of encrypted data:\n");
+	for (extent_offset = 0; extent_offset < 8; extent_offset++) {
+		printk(KERN_ERR "%hhx\n", *(enc_extent_virt + extent_offset));
+	}
+
 	rc = 0;
 out:
 	kunmap(enc_extent_page);
@@ -706,6 +729,11 @@ int ecryptfs_decrypt_page(struct page *page)
 	char *page_virt;
 	unsigned long extent_offset;
 	loff_t lower_offset;
+	int num_extents;
+	u8 *extra_data;
+	u8 cipher_mode_code;
+	int data_extent_num;
+	int auth_extent_num;
 	int rc = 0;
 
 	ecryptfs_inode = page->mapping->host;
@@ -713,31 +741,117 @@ int ecryptfs_decrypt_page(struct page *page)
 		&(ecryptfs_inode_to_private(ecryptfs_inode)->crypt_stat);
 	BUG_ON(!(crypt_stat->flags & ECRYPTFS_ENCRYPTED));
 
-	lower_offset = lower_offset_for_page(crypt_stat, page);
-	page_virt = kmap(page);
-	// ZAMEER: change how this is called
-	rc = ecryptfs_read_lower(page_virt, lower_offset, PAGE_CACHE_SIZE,
-				 ecryptfs_inode);
-	kunmap(page);
-	if (rc < 0) {
-		ecryptfs_printk(KERN_ERR,
-			"Error attempting to read lower page; rc = [%d]\n",
-			rc);
+	num_extents = PAGE_CACHE_SIZE / crypt_stat->extent_size;
+	cipher_mode_code = ecryptfs_code_for_cipher_mode_string(crypt_stat->cipher_mode);
+
+	extra_data = kmalloc(num_extents * 16, GFP_KERNEL);
+
+	if (!extra_data) {
+		rc = -ENOMEM;
+		ecryptfs_printk(KERN_ERR, "Error allocating extra memory for "
+				"encrypted extent\n");
 		goto out;
 	}
 
+	lower_offset = lower_offset_for_page(crypt_stat, page);
+	page_virt = kmap(page);
+	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
+		// TODO XXX Verify this is correct.
+		// Read in each extent + authtag
+		// TODO XXX Remove the debug printing
+
+		printk(KERN_ERR "Starting to read in encrypted page of data.\n");
+		for (extent_offset = 0; extent_offset < num_extents;
+				extent_offset++) {
+			printk(KERN_ERR "Reading Extent #%lu of page.\n", extent_offset + 1);
+
+			// First compute the data extent number
+			data_extent_num = (page->index * num_extents) + 1;
+			data_extent_num += extent_offset;
+			printk(KERN_ERR "This is Extent #%d of whole file.\n", data_extent_num);
+
+			// Compute the lower offset of the extent
+			lower_offset = ecryptfs_lower_header_size(crypt_stat);
+			printk(KERN_ERR "Header Size = %lld\n", lower_offset);
+			printk(KERN_ERR "Extent Size = %zu\n", crypt_stat->extent_size);
+			// Add number of data extents
+			lower_offset += (data_extent_num -1) * crypt_stat->extent_size;
+			// Add number of auth tag extents
+			// TODO: Verify this is correct
+			auth_extent_num = (data_extent_num + 255) >> 8;
+			printk(KERN_ERR "There are %d auth extents before this data extent.\n", auth_extent_num);
+			lower_offset += auth_extent_num * crypt_stat->extent_size;
+
+			printk(KERN_ERR "Reading Extent at Lower Offset = %lld\n", lower_offset);
+
+			// Read the data extent
+			rc = ecryptfs_read_lower(page_virt +
+						(extent_offset * crypt_stat->extent_size),
+						lower_offset,
+						crypt_stat->extent_size,
+						ecryptfs_inode);
+
+			if (rc < 0) {
+				printk(KERN_ERR "Error attempting to read lower"
+						"page; rc = [%d]\n", rc);
+				goto out;
+			}
+
+			// Read the auth tag for the extent
+
+			lower_offset = ecryptfs_lower_header_size(crypt_stat);
+			lower_offset += (auth_extent_num - 1) * 257 * crypt_stat->extent_size;
+
+			printk(KERN_ERR "Reading Auth Tag at Lower Offset = %lld\n", lower_offset);
+
+			rc = ecryptfs_read_lower(extra_data + (16 * extent_offset),
+					lower_offset,
+					16, ecryptfs_inode);
+
+			if (rc < 0) {
+				printk(KERN_ERR "Error attempting to read lower"
+						"page; rc = [%d]\n", rc);
+				goto out;
+			}
+		}
+	} else {
+		rc = ecryptfs_read_lower(page_virt, lower_offset, PAGE_CACHE_SIZE,
+					ecryptfs_inode);
+		if (rc < 0) {
+			ecryptfs_printk(KERN_ERR,
+				"Error attempting to read lower page; rc = [%d]\n",
+				rc);
+			goto out;
+		}
+	}
+
+	printk(KERN_ERR "First 8 bytes of encrypted data:\n");
+	for (extent_offset = 0; extent_offset < 8; extent_offset++) {
+		printk(KERN_ERR "%hhx\n", *(page_virt + extent_offset));
+	}
+
 	for (extent_offset = 0;
-	     extent_offset < (PAGE_CACHE_SIZE / crypt_stat->extent_size);
+	     extent_offset < num_extents;
 	     extent_offset++) {
-		rc = crypt_extent(crypt_stat, page, page, NULL,
-				  extent_offset, DECRYPT);
+		rc = crypt_extent(crypt_stat, page, page,
+				extra_data + (16 * extent_offset),
+				extent_offset, DECRYPT);
 		if (rc) {
 			printk(KERN_ERR "%s: Error encrypting extent; "
 			       "rc = [%d]\n", __func__, rc);
 			goto out;
 		}
 	}
+
+	printk(KERN_ERR "First 8 bytes of decrypted data:\n");
+	for (extent_offset = 0; extent_offset < 8; extent_offset++) {
+		printk(KERN_ERR "%hhx\n", *(page_virt + extent_offset));
+	}
 out:
+	kunmap(page);
+	if (extra_data) {
+		kfree(extra_data);
+	}
 	return rc;
 }
 
