@@ -688,9 +688,9 @@ int ecryptfs_encrypt_page(struct page *page)
 		}
 	}
 
-	printk(KERN_ERR "First 8 bytes of encrypted data:\n");
-	for (extent_offset = 0; extent_offset < 8; extent_offset++) {
-		printk(KERN_ERR "%hhx\n", *(enc_extent_virt + extent_offset));
+	printk(KERN_ERR "Last 16 bytes of encrypted data after encryption:\n");
+	for (extent_offset = 0; extent_offset < 16; extent_offset++) {
+		printk(KERN_ERR "%hhx\n", *(enc_extent_virt + PAGE_SIZE + extent_offset - 1));
 	}
 
 	rc = 0;
@@ -825,10 +825,16 @@ int ecryptfs_decrypt_page(struct page *page)
 		}
 	}
 
-	printk(KERN_ERR "First 8 bytes of encrypted data:\n");
-	for (extent_offset = 0; extent_offset < 8; extent_offset++) {
-		printk(KERN_ERR "%hhx\n", *(page_virt + extent_offset));
+	/* printk(KERN_ERR "First 8 bytes of encrypted data:\n"); */
+	/* for (extent_offset = 0; extent_offset < 8; extent_offset++) { */
+	/* 	printk(KERN_ERR "%hhx\n", *(page_virt + extent_offset)); */
+	/* } */
+
+	printk(KERN_ERR "Last 16 bytes of encrypted data before decryption:\n");
+	for (extent_offset = 0; extent_offset < 16; extent_offset++) {
+		printk(KERN_ERR "%hhx\n", *(page_virt + PAGE_SIZE + extent_offset - 1));
 	}
+
 
 	for (extent_offset = 0;
 	     extent_offset < num_extents;
