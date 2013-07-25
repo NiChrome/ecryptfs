@@ -441,11 +441,15 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 			goto out;
 		}
 		crypt_stat->flags |= ECRYPTFS_KEY_SET;
+		rc = crypto_aead_setauthsize((struct crypto_aead *)crypt_stat->tfm, 16);
 	}
 	mutex_unlock(&crypt_stat->cs_tfm_mutex);
 
 
 	if (cipher_code == ECRYPTFS_CIPHER_MODE_GCM) {
+		if (op == DECRYPT) {
+			size += 16;
+		}
 		aead_request_set_crypt(aead_req, src_sg, dst_sg, size, iv);
 		aead_request_set_assoc(aead_req, &assoc_sg, ARRAY_SIZE(assoc_buf));
 	} else {
