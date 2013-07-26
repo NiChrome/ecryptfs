@@ -40,29 +40,6 @@
 #define DECRYPT		0
 #define ENCRYPT		1
 
-
-static void dump_hex(char *data, int bytes)
-{
-	int i = 0;
-	int add_newline = 1;
-
-	if (bytes != 0) {
-		printk(KERN_ERR "0x%.2x.", (unsigned char)data[i]);
-		i++;
-	}
-	while (i < bytes) {
-		printk(KERN_ERR "0x%.2x.", (unsigned char)data[i]);
-		i++;
-		if (i % 16 == 0) {
-			printk("\n");
-			add_newline = 0;
-		} else
-			add_newline = 1;
-	}
-	if (add_newline)
-		printk(KERN_ERR "\n");
-}
-
 /**
  * ecryptfs_to_hex
  * @dst: Buffer to take hex character representation of contents of
@@ -423,8 +400,6 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 					crypt_stat->tfm,
 					crypt_stat->key,
 					crypt_stat->key_size);
-			printk(KERN_ERR "Key:\n");
-			dump_hex(crypt_stat->key, crypt_stat->key_size);
 		} else {
 			rc = crypto_ablkcipher_setkey((struct crypto_ablkcipher*)
 					crypt_stat->tfm,
@@ -532,15 +507,12 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 			(unsigned long long)(extent_base + extent_offset), rc);
 		goto out;
 	}
-	// TODO: Remove Debug Output
 
 	if (op == DECRYPT) {
 		// Copy the extra data to the proper place
 		unsigned long offset = 16 * extent_offset;
 		memcpy(extra_src, extra_data + offset, 16);
 
-		printk(KERN_ERR "Given Auth Tag For Decryption:\n");
-		dump_hex(extra_data + offset, 16);
 	}
 
 	sg_init_table(&src_sg[0], 2); sg_init_table(&dst_sg[0], 2);
@@ -566,9 +538,6 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 		// Copy the extra data to the proper place
 		unsigned long offset = 16 * extent_offset;
 		memcpy(extra_data + offset, extra_dst, 16);
-
-		printk(KERN_ERR "Retrieved Auth Tag From Encryption:\n");
-		dump_hex(extra_data + offset, 16);
 	}
 
 	rc = 0;
@@ -649,12 +618,6 @@ int ecryptfs_encrypt_page(struct page *page)
 	}
 
 	enc_extent_virt = kmap(enc_extent_page);
-
-	printk(KERN_ERR "Encrypted Page of Data:\n");
-	dump_hex(enc_extent_virt, PAGE_CACHE_SIZE);
-
-	printk(KERN_ERR "Auth Tags For Data:\n");
-	dump_hex(extra_data, num_extents * 16);
 
 	if (cipher_mode_code == ECRYPTFS_CIPHER_MODE_GCM) {
 		// TODO XXX Verify this is correct.
@@ -861,12 +824,6 @@ int ecryptfs_decrypt_page(struct page *page)
 			goto out;
 		}
 	}
-
-	printk(KERN_ERR "Retrieved Page of Data before decryption:\n");
-	dump_hex(page_virt, PAGE_CACHE_SIZE);
-
-	printk(KERN_ERR "Retrived Auth Tags before decryption:\n");
-	dump_hex(extra_data, 16 * num_extents);
 
 	for (extent_offset = 0;
 	     extent_offset < num_extents;
