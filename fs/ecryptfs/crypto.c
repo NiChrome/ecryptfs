@@ -352,8 +352,6 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 	u8 assoc_buf[16] = {0};
 	struct scatterlist assoc_sg;
 
-	printk(KERN_ERR "Entering crypt_scatterlist\n");
-
 	sg_init_one(&assoc_sg, &assoc_buf[0], ARRAY_SIZE(assoc_buf));
 
 	BUG_ON(!crypt_stat || !crypt_stat->tfm
@@ -451,7 +449,6 @@ static int crypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 out:
 	ablkcipher_request_free(ablk_req);
 	aead_request_free(aead_req);
-	printk(KERN_ERR "Exiting crypt_scatterlist\n");
 	return rc;
 }
 
@@ -495,8 +492,6 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 	u8 extra_dst[16] = {0};
 	size_t extent_size = crypt_stat->extent_size;
 	int rc;
-
-	printk(KERN_ERR "Entering crypt_extent\n");
 
 	extent_base = (((loff_t)page_index) * (PAGE_CACHE_SIZE / extent_size));
 	rc = ecryptfs_derive_iv(extent_iv, crypt_stat,
@@ -542,7 +537,6 @@ static int crypt_extent(struct ecryptfs_crypt_stat *crypt_stat,
 
 	rc = 0;
 out:
-	printk(KERN_ERR "Exiting crypt_extent\n");
 	return rc;
 }
 
@@ -576,8 +570,6 @@ int ecryptfs_encrypt_page(struct page *page)
 	int data_extent_num;
 	int auth_extent_num;
 	int rc = 0;
-
-	printk(KERN_ERR "Entering ecryptfs_encrypt_page\n");
 
 	ecryptfs_inode = page->mapping->host;
 	crypt_stat =
@@ -699,8 +691,6 @@ out:
 		kfree(extra_data);
 	}
 
-
-	printk(KERN_ERR "Exiting ecryptfs_encrypt_page\n");
 	return rc;
 }
 
@@ -733,8 +723,6 @@ int ecryptfs_decrypt_page(struct page *page)
 	int data_extent_num;
 	int auth_extent_num;
 	int rc = 0;
-
-	printk(KERN_ERR "Entering ecryptfs_decrypt_page\n");
 
 	ecryptfs_inode = page->mapping->host;
 	crypt_stat =
@@ -843,7 +831,6 @@ out:
 	if (extra_data) {
 		kfree(extra_data);
 	}
-	printk(KERN_ERR "Exiting ecryptfs_decrypt_page\n");
 	return rc;
 }
 
