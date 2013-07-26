@@ -616,29 +616,22 @@ int ecryptfs_encrypt_page(struct page *page)
 		// Write out each extent + auth tag
 		// TODO XXX Remove the debug printing
 		
-		printk(KERN_ERR "Starting to write encrypted page of data.\n");
 		for (extent_offset = 0; extent_offset < num_extents;
 			extent_offset++) {
-			printk(KERN_ERR "Writing Extent #%lld of page.\n", extent_offset + 1);
 
 			// First compute the data extent number
 			data_extent_num = (page->index * num_extents) + 1;
 			data_extent_num += extent_offset;
-			printk(KERN_ERR "This is Extent #%d of whole file.\n", data_extent_num);
 
 			// Compute the lower offset of the extent
 			lower_offset = ecryptfs_lower_header_size(crypt_stat);
-			printk(KERN_ERR "Header Size = %lld\n", lower_offset);
-			printk(KERN_ERR "Extent Size = %zu\n", crypt_stat->extent_size);
 			// Add number of data extents
 			lower_offset += (data_extent_num -1) * crypt_stat->extent_size;
 			// Add number of auth tag extents
 			// TODO: Verify this is correct
 			auth_extent_num = (data_extent_num + 255) >> 8;
-			printk(KERN_ERR "There are %d auth extents before this data extent.\n", auth_extent_num);
 			lower_offset += auth_extent_num * crypt_stat->extent_size;
 
-			printk(KERN_ERR "Storing Extent at Lower Offset = %lld\n", lower_offset);
 
 			// Write the data extent
 			rc = ecryptfs_write_lower(ecryptfs_inode,
@@ -656,7 +649,6 @@ int ecryptfs_encrypt_page(struct page *page)
 
 			lower_offset = ecryptfs_lower_header_size(crypt_stat);
 			lower_offset += (auth_extent_num - 1) * 257 * crypt_stat->extent_size;
-			printk(KERN_ERR "Storing Auth Tag at Lower Offset = %lld\n", lower_offset);
 
 			rc = ecryptfs_write_lower(ecryptfs_inode,
 					extra_data + (16 * extent_offset),
@@ -748,29 +740,22 @@ int ecryptfs_decrypt_page(struct page *page)
 		// Read in each extent + authtag
 		// TODO XXX Remove the debug printing
 
-		printk(KERN_ERR "Starting to read in encrypted page of data.\n");
 		for (extent_offset = 0; extent_offset < num_extents;
 				extent_offset++) {
-			printk(KERN_ERR "Reading Extent #%lu of page.\n", extent_offset + 1);
 
 			// First compute the data extent number
 			data_extent_num = (page->index * num_extents) + 1;
 			data_extent_num += extent_offset;
-			printk(KERN_ERR "This is Extent #%d of whole file.\n", data_extent_num);
 
 			// Compute the lower offset of the extent
 			lower_offset = ecryptfs_lower_header_size(crypt_stat);
-			printk(KERN_ERR "Header Size = %lld\n", lower_offset);
-			printk(KERN_ERR "Extent Size = %zu\n", crypt_stat->extent_size);
 			// Add number of data extents
 			lower_offset += (data_extent_num -1) * crypt_stat->extent_size;
 			// Add number of auth tag extents
 			// TODO: Verify this is correct
 			auth_extent_num = (data_extent_num + 255) >> 8;
-			printk(KERN_ERR "There are %d auth extents before this data extent.\n", auth_extent_num);
 			lower_offset += auth_extent_num * crypt_stat->extent_size;
 
-			printk(KERN_ERR "Reading Extent at Lower Offset = %lld\n", lower_offset);
 
 			// Read the data extent
 			rc = ecryptfs_read_lower(page_virt +
@@ -790,7 +775,6 @@ int ecryptfs_decrypt_page(struct page *page)
 			lower_offset = ecryptfs_lower_header_size(crypt_stat);
 			lower_offset += (auth_extent_num - 1) * 257 * crypt_stat->extent_size;
 
-			printk(KERN_ERR "Reading Auth Tag at Lower Offset = %lld\n", lower_offset);
 
 			rc = ecryptfs_read_lower(extra_data + (16 * extent_offset),
 					lower_offset,
